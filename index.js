@@ -2,12 +2,22 @@ import { authenticate } from "@google-cloud/local-auth";
 import { google } from "googleapis";
 import path from "path";
 import fs from "fs/promises";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
+import { Client } from "@notionhq/client";
+
+dotenv.config();
 
 const __dirname = path.resolve();
 
 const SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
 const CREDENTIALS_PATH = path.join(__dirname, "oauth-credentials.json");
 const TOKEN_PATH = path.join(__dirname, "oauth-token.json");
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
 async function searchEmails(gmail) {
   try {
@@ -131,6 +141,113 @@ const getAuth = async () => {
   }
 };
 
+async function parseEmailWithGemini(email) {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const prompt = `
+    Extract the following information from this email about a job offer:
+    - Company_Name
+    - Job_Role
+    - Internship_Stipend
+    - PPO_Package (if mentioned)
+    - Employment_Type (Full-time/Part-time/Internship)
+    - Salary (if different from PPO Package)
+    - Job_Location (Remote/On-site)
+    - Equity_Stock_Options (if applicable)
+    - Bonuses
+    - CGPA
+    
+    Return the information in JSON format.
+    
+    Email subject:
+    ${email.subject}
+
+    Email content:
+    ${email.body}
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    // console.log("Response: ", response.text());
+
+    // remove ```json from the start and ``` from the end of the response.text()
+
+    const responseText = response
+      .text()
+      .replace("```json", "")
+      .replace("```", "");
+
+    return JSON.parse(responseText);
+  } catch (error) {
+    console.error("Error parsing with Gemini:", error);
+    return null;
+  }
+}
+
+async function addToNotion(parsedData) {
+  try {
+    const response = await notion.pages.create({
+      parent: { database_id: NOTION_DATABASE_ID },
+      properties: {
+        "Company Name": {
+          title: [{ text: { content: parsedData.Company_Name } }],
+        },
+        // "Job Role": {
+        //   rich_text: [{ text: { content: parsedData.jobRole } }],
+        // },
+        // "Internship Stipend": {
+        //   rich_text: [
+        //     { text: { content: parsedData.internshipStipend.toString() } },
+        //   ],
+        // },
+        // "PPO Package": {
+        //   rich_text: [
+        //     { text: { content: parsedData.ppoPackage || "Not mentioned" } },
+        //   ],
+        // },
+        // "Employment Type": {
+        //   rich_text: [
+        //     { text: { content: parsedData.employmentType || "Not mentioned" } },
+        //   ],
+        // },
+        // Salary: {
+        //   rich_text: [
+        //     { text: { content: parsedData.salary || "Not mentioned" } },
+        //   ],
+        // },
+        // "Job Location": {
+        //   rich_text: [
+        //     { text: { content: parsedData.jobLocation || "Not mentioned" } },
+        //   ],
+        // },
+        // "Equity/Stock Options": {
+        //   rich_text: [
+        //     {
+        //       text: {
+        //         content: parsedData.equityStockOptions || "Not mentioned",
+        //       },
+        //     },
+        //   ],
+        // },
+        // Bonuses: {
+        //   rich_text: [
+        //     { text: { content: parsedData.bonuses || "Not mentioned" } },
+        //   ],
+        // },
+        // CGPA: {
+        //   rich_text: [
+        //     { text: { content: parsedData.cgpa || "Not mentioned" } },
+        //   ],
+        // },
+      },
+    });
+    console.log("Page created:", response);
+  } catch (error) {
+    console.error("Error adding to Notion:", error);
+  }
+}
+
 async function main() {
   try {
     const auth = await getAuth();
@@ -143,17 +260,19 @@ async function main() {
       const emailContent = await getEmailContent(gmail, message.id);
       if (!emailContent) continue;
 
-      console.log("Email content: ", emailContent);
-
-      return;
+      console.log("Email Processing: ", emailContent.subject);
 
       // Parse with Gemini
-      // const parsedData = await parseEmailWithGemini(emailContent.body);
-      // if (!parsedData) continue;
+      const parsedData = await parseEmailWithGemini(emailContent);
+      if (!parsedData) continue;
+
+      console.log(parsedData);
+      console.log(parsedData.Company_Name);
       // Add to Notion
-      // await addToNotion(parsedData);
+      await addToNotion(parsedData);
       // console.log(`Processed email: ${emailContent.subject}`);
       // console.log("Processing email:", message.id);
+      return;
     }
   } catch (error) {
     console.error("Error in main:", error);
