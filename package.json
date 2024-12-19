@@ -1,0 +1,13 @@
+{
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "@google/generative-ai": "^0.21.0",
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.7",
+    "googleapis": "^144.0.0"
+  }
+}
