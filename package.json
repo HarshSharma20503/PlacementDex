@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node main.js"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
@@ -9,7 +9,8 @@
     "@notionhq/client": "^2.2.15",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "googleapis": "^144.0.0"
+    "googleapis": "^144.0.0",
+    "inquirer": "^12.2.0"
   },
   "name": "placementdex",
   "version": "1.0.0",

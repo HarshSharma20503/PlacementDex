@@ -6,23 +6,23 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import { Client } from "@notionhq/client";
 
-const LAST_PROCESSED_DATE_PATH = path.join(__dirname, "last-processed-date.json");
+const LAST_PROCESSED_DATE_PATH = path.join(
+  __dirname,
+  "last-processed-date.json"
+);
 
 dotenv.config();
 
 const __dirname = path.resolve();
 
 const SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
-const CREDENTIALS_PATH = path.join(__dirname, "oauth-credentials.json");
-const TOKEN_PATH = path.join(__dirname, "oauth-token.json");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
-async function searchEmails(gmail) 
-{
+async function searchEmails(gmail) {
   try {
     const query = lastProcessedDate
       ? `from:anurag.jptnp@gmail.com after:${lastProcessedDate}`
@@ -67,7 +67,6 @@ async function searchEmails(gmail)
     console.error("Error searching emails:", error);
     return [];
   }
-
 
   try {
     // First, get all messages
@@ -147,49 +146,6 @@ async function getEmailContent(gmail, messageId) {
   }
 }
 
-async function saveCredentials(client) {
-  const content = await fs.readFile(CREDENTIALS_PATH);
-  const keys = JSON.parse(content);
-  const key = keys.installed || keys.web;
-  const payload = JSON.stringify({
-    type: "authorized_user",
-    client_id: key.client_id,
-    client_secret: key.client_secret,
-    refresh_token: client.credentials.refresh_token,
-  });
-  await fs.writeFile(TOKEN_PATH, payload);
-}
-
-async function loadSavedCredentialsIfExist() {
-  try {
-    const content = await fs.readFile(TOKEN_PATH);
-    const credentials = JSON.parse(content);
-    return google.auth.fromJSON(credentials);
-  } catch (err) {
-    return null;
-  }
-}
-
-const getAuth = async () => {
-  try {
-    let auth = await loadSavedCredentialsIfExist();
-    if (auth) {
-      return auth;
-    }
-    auth = await authenticate({
-      keyfilePath: CREDENTIALS_PATH,
-      scopes: SCOPES,
-    });
-    if (auth.credentials) {
-      await saveCredentials(auth);
-    }
-    return auth;
-  } catch (error) {
-    console.error("Error during authentication:", error);
-    throw error;
-  }
-};
-
 async function parseEmailWithGemini(email) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -241,38 +197,38 @@ async function addToNotion(parsedData) {
     const response = await notion.pages.create({
       parent: { database_id: NOTION_DATABASE_ID },
       properties: {
-        "Company_Name": {
+        Company_Name: {
           title: [{ text: { content: parsedData.Company_Name } }],
         },
-        "Job_Role": {
+        Job_Role: {
           rich_text: [{ text: { content: parsedData.jobRole } }],
         },
-        "Internship_Stipend": {
+        Internship_Stipend: {
           rich_text: [
             { text: { content: parsedData.internshipStipend.toString() } },
           ],
         },
-        "PPO_Package": {
+        PPO_Package: {
           rich_text: [
             { text: { content: parsedData.ppoPackage || "Not mentioned" } },
           ],
         },
-        "Employment_Type": {
+        Employment_Type: {
           rich_text: [
             { text: { content: parsedData.employmentType || "Not mentioned" } },
           ],
         },
-        "Base_Salary": {
+        Base_Salary: {
           rich_text: [
             { text: { content: parsedData.salary || "Not mentioned" } },
           ],
         },
-        "Job_Location": {
+        Job_Location: {
           rich_text: [
             { text: { content: parsedData.jobLocation || "Not mentioned" } },
           ],
         },
-        "Stock_Options": {
+        Stock_Options: {
           rich_text: [
             {
               text: {
@@ -281,18 +237,18 @@ async function addToNotion(parsedData) {
             },
           ],
         },
-        "Bonuses": {
+        Bonuses: {
           rich_text: [
             { text: { content: parsedData.bonuses || "Not mentioned" } },
           ],
         },
-        "CGPA_Criteria": {
+        CGPA_Criteria: {
           rich_text: [
             { text: { content: parsedData.cgpa || "Not mentioned" } },
           ],
         },
       },
-      "Date": {
+      Date: {
         title: [{ text: { content: parsedData.Date } }],
       },
     });
@@ -366,8 +322,7 @@ async function main() {
   }
 }
 
-async function loadLastProcessedDate()
-{
+async function loadLastProcessedDate() {
   try {
     const content = await fs.readFile(LAST_PROCESSED_DATE_PATH, "utf-8");
     return JSON.parse(content).date;
@@ -378,7 +333,10 @@ async function loadLastProcessedDate()
 
 async function saveLastProcessedDate(date) {
   try {
-    await fs.writeFile(LAST_PROCESSED_DATE_PATH, JSON.stringify({ date }, null, 2));
+    await fs.writeFile(
+      LAST_PROCESSED_DATE_PATH,
+      JSON.stringify({ date }, null, 2)
+    );
   } catch (error) {
     console.error("Error saving last processed date:", error);
   }
