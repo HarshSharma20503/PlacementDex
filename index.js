@@ -25,7 +25,7 @@ async function searchEmails(gmail) {
     const response = await gmail.users.messages.list({
       userId: "me",
       q: "from:anurag.jptnp@gmail.com",
-      maxResults: 10,
+      maxResults: 30,
     });
 
     const messages = response.data.messages || [];
@@ -151,11 +151,13 @@ async function parseEmailWithGemini(email) {
     - Internship_Stipend
     - PPO_Package (if mentioned)
     - Employment_Type (Full-time/Part-time/Internship)
-    - Salary (if different from PPO Package)
+    - Base_Salary
     - Job_Location (Remote/On-site)
     - Equity_Stock_Options (if applicable)
     - Bonuses
-    - CGPA
+    - CGPA_Criteria
+    - Date
+    
     
     Return the information in JSON format.
     
@@ -190,56 +192,59 @@ async function addToNotion(parsedData) {
     const response = await notion.pages.create({
       parent: { database_id: NOTION_DATABASE_ID },
       properties: {
-        "Company Name": {
+        "Company_Name": {
           title: [{ text: { content: parsedData.Company_Name } }],
         },
-        // "Job Role": {
-        //   rich_text: [{ text: { content: parsedData.jobRole } }],
-        // },
-        // "Internship Stipend": {
-        //   rich_text: [
-        //     { text: { content: parsedData.internshipStipend.toString() } },
-        //   ],
-        // },
-        // "PPO Package": {
-        //   rich_text: [
-        //     { text: { content: parsedData.ppoPackage || "Not mentioned" } },
-        //   ],
-        // },
-        // "Employment Type": {
-        //   rich_text: [
-        //     { text: { content: parsedData.employmentType || "Not mentioned" } },
-        //   ],
-        // },
-        // Salary: {
-        //   rich_text: [
-        //     { text: { content: parsedData.salary || "Not mentioned" } },
-        //   ],
-        // },
-        // "Job Location": {
-        //   rich_text: [
-        //     { text: { content: parsedData.jobLocation || "Not mentioned" } },
-        //   ],
-        // },
-        // "Equity/Stock Options": {
-        //   rich_text: [
-        //     {
-        //       text: {
-        //         content: parsedData.equityStockOptions || "Not mentioned",
-        //       },
-        //     },
-        //   ],
-        // },
-        // Bonuses: {
-        //   rich_text: [
-        //     { text: { content: parsedData.bonuses || "Not mentioned" } },
-        //   ],
-        // },
-        // CGPA: {
-        //   rich_text: [
-        //     { text: { content: parsedData.cgpa || "Not mentioned" } },
-        //   ],
-        // },
+        "Job_Role": {
+          rich_text: [{ text: { content: parsedData.jobRole } }],
+        },
+        "Internship_Stipend": {
+          rich_text: [
+            { text: { content: parsedData.internshipStipend.toString() } },
+          ],
+        },
+        "PPO_Package": {
+          rich_text: [
+            { text: { content: parsedData.ppoPackage || "Not mentioned" } },
+          ],
+        },
+        "Employment_Type": {
+          rich_text: [
+            { text: { content: parsedData.employmentType || "Not mentioned" } },
+          ],
+        },
+        "Base_Salary": {
+          rich_text: [
+            { text: { content: parsedData.salary || "Not mentioned" } },
+          ],
+        },
+        "Job_Location": {
+          rich_text: [
+            { text: { content: parsedData.jobLocation || "Not mentioned" } },
+          ],
+        },
+        "Stock_Options": {
+          rich_text: [
+            {
+              text: {
+                content: parsedData.equityStockOptions || "Not mentioned",
+              },
+            },
+          ],
+        },
+        "Bonuses": {
+          rich_text: [
+            { text: { content: parsedData.bonuses || "Not mentioned" } },
+          ],
+        },
+        "CGPA_Criteria": {
+          rich_text: [
+            { text: { content: parsedData.cgpa || "Not mentioned" } },
+          ],
+        },
+      },
+      "Date": {
+        title: [{ text: { content: parsedData.Date } }],
       },
     });
     console.log("Page created:", response);

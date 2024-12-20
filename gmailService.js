@@ -5,7 +5,7 @@ export class GmailService {
     this.gmail = google.gmail({ version: "v1", auth });
   }
 
-  async listMessages(query = "", maxResults = 10) {
+  async listMessages(query = "", maxResults = 30) {
     try {
       const response = await this.gmail.users.messages.list({
         userId: "me",
