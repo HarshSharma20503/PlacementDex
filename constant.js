@@ -20,20 +20,53 @@ export const TNP_EMAILS = process.env.TNP_EMAILS.split(",");
 export const NODE_ENV = process.env.NODE_ENV || development;
 
 export const SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
-export const BASE_PROMPT =`
-    Extract the following information from this email about a job offer:
-    - Company_Name
-    - Job_Role
-    - Internship_Stipend
-    - PPO_Package (if mentioned)
-    - Employment_Type (Full-time/Part-time/Internship)
-    - Base_Salary
-    - Job_Location (Remote/On-site)
-    - Equity_Stock_Options (if applicable)
-    - Bonuses
-    - CGPA_Criteria
-    - Date
-    
-    
-    Return the information in JSON format.   
-  `
+export const BASE_PROMPT = `
+I have received the following email from my college regarding job offers from a company. Please extract the following information, if present, from this email:
+	-	Company_Name (string) - Name of the company
+	-	Job_Role (string) - Software Engineer, Data Scientist, etc.
+  - offer_type (string) - Internship or Full Time
+	-	Internship_Stipend (integer) - Internship stipend
+  - Internship_Duration (string) - Internship Duration
+	-	Job_Location (string) - Location of the job
+	-	No_of_students_who_got_offers (integer) - Number of students who got offers
+	-	FTE_Expected_package (string) - expected salary or ctc package for FTE in lakhs  per annum after internship, the expected paackage can also be in range like 16-20 LPA
+	-	FTE_Package (integer) - package for FTE in lakhs per annum
+  - Bond (string) - details of Bond if present
+
+Return the information in JSON format.
+
+Note:
+1. If the offer is of internship than FTE_Expected_package should be present 
+2. If the offer is of FTE than Internship_Stipend and Internship_Duration should not be present.
+3. If the body of the email contains Internship duration or Internship Stipend that means the offer is Internship not full time.
+
+
+Response should look like:
+
+example Response 1:
+{
+  "Company_Name": "Google",
+  "Job_Role": "Software Engineer",
+  "offer_type": "Internship",
+  "Internship_Stipend": 50000,
+  "Internship_Duration": "6 months",
+  "Job_Location": "Bangalore",
+  "No_of_students_who_got_offers": 5,
+  "CTC_Details": "10 LPA",
+  "FTE_Expected_package": 16-20 LPA",
+}
+
+example Response 2:
+{
+  "Company_Name": "Atlassian",
+  "Job_Role": "Data Analytics",
+  "offer_type": "FTE",
+  "Job_Location": "Bangalore",
+  "No_of_students_who_got_offers": 5,
+  "CTC_Details": "52 LPA",
+  "FTE_Package": 16-20 LPA",
+}
+
+The Email is as follows:
+
+`;

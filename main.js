@@ -1,9 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
 import GmailService from "./services/GmailService.js";
+import GeminiService from "./services/GeminiService.js";
 import inquirer from "inquirer";
 
 const gmailService = new GmailService();
+const geminiService = new GeminiService();
 
 const Options = {
   "Fetch Oldest Unprocessed Emails": 1,
@@ -35,6 +37,11 @@ async function main() {
   } else {
     console.log("Fetching Latest Unprocessed Emails");
     emails = await gmailService.searchUnprocessedLatestEmails();
+  }
+  console.log("Parsing email with Gemini");
+  for (const email of emails) {
+    const response = await geminiService.parseEmailWithGemini(email);
+    console.log("Response from Gemini:", response.text());
   }
 }
 
