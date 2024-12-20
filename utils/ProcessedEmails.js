@@ -14,13 +14,13 @@ export async function getProcessedEmails() {
 }
 
 // Function to get the latest message ID from processed emails
-export async function getLatestMessageId() {
+export async function getLatestMessage() {
   const emails = await getProcessedEmails();
   if (emails.length === 0) return null;
 
   return emails.reduce((latest, email) => {
     return new Date(email.date) > new Date(latest.date) ? email : latest;
-  }, emails[0]).messageId;
+  }, emails[0]);
 }
 
 // Function to get the oldest message ID from processed emails

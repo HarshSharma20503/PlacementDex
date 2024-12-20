@@ -2,9 +2,10 @@ import { google } from "googleapis";
 import getAuth from "../utils/GoogleAuth.js";
 import {
   getOldestMessage,
-  getLatestMessageId,
+  getLatestMessage,
 } from "../utils/ProcessedEmails.js";
 import { NODE_ENV, TNP_EMAILS } from "../constant.js";
+import { formatDateAccordingToGoogle } from "../utils/helper.js";
 
 class GmailService {
   async initialize() {
@@ -85,14 +86,7 @@ class GmailService {
     let FormattedDate = "";
     if (oldestMessage) {
       const messageDate = new Date(oldestMessage?.date);
-      FormattedDate = `${messageDate.getFullYear()}/${(
-        messageDate.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "0")}/${messageDate
-        .getDate()
-        .toString()
-        .padStart(2, "0")}`;
+      FormattedDate = formatDateAccordingToGoogle(messageDate);
     }
     const query = `from:(${TNP_EMAILS.join(" OR ")}) ${
       FormattedDate ? `before:${FormattedDate}` : ""
@@ -122,21 +116,62 @@ class GmailService {
   async searchUnprocessedLatestEmails() {
     console.log("Searching for unprocessed latest emails");
 
-    const latestMessageId = await getLatestMessageId();
+    const latestMessage = await getLatestMessage();
+    console.log("LatestMessage: ", latestMessage);
 
-    const query = `from:(${TNP_EMAILS.join(" OR ")} ${
-      latestMessageId ? `after:${latestMessageId}` : ""
-    })`;
+    let formattedDate = "";
+    if (latestMessage?.date) {
+      // Added null check
+      const messageDate = new Date(latestMessage.date);
+      formattedDate = formatDateAccordingToGoogle(messageDate);
+    }
 
-    const response = await this.GMAIL.users.messages.list({
-      userId: "me",
-      q: query,
-      maxResults: NODE_ENV === "development" ? 2 : 100000,
-    });
+    // Fixed query string construction
+    const query = `from:(${TNP_EMAILS.join(" OR ")}) ${
+      formattedDate ? `after:${formattedDate}` : ""
+    }`.trim(); // Added trim() to remove extra spaces
 
-    const messages = response.data.messages || [];
-    const filteredMessages = await this.getCongratulatoryEmails(messages);
-    return filteredMessages;
+    console.log("Query: ", query);
+
+    try {
+      // Added error handling
+      const response = await this.GMAIL.users.messages.list({
+        userId: "me",
+        q: query,
+        maxResults: NODE_ENV === "development" ? 50 : 100000,
+      });
+
+      console.log("Query results:", response.data.messages?.length || 0);
+
+      const messages = response.data.messages || [];
+
+      if (messages.length === 0) {
+        console.log("No messages found matching the query");
+        return [];
+      }
+
+      const filteredMessages = await this.getCongratulatoryEmails(messages);
+      console.log(`Found ${filteredMessages.length} congratulatory messages`);
+
+      const emails = await Promise.all(
+        filteredMessages.map(async (message) => {
+          try {
+            return await this.getEmailContent(message.id);
+          } catch (error) {
+            console.error(
+              `Failed to get email content for ID ${message.id}:`,
+              error
+            );
+            return null;
+          }
+        })
+      );
+
+      return emails.filter((email) => email !== null);
+    } catch (error) {
+      console.error("Error searching unprocessed latest emails:", error);
+      throw error; // or handle it according to your error handling strategy
+    }
   }
 }
 
