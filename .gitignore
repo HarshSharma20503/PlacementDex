@@ -4,3 +4,4 @@ node_modules
 oauth-credentials.json
 oauth-token.json
 processed-emails.json
+failed-emails.json

@@ -11,6 +11,7 @@ export const PROCESSED_EMAILS_PATH = path.join(
   __dirname,
   "processed-emails.json"
 );
+export const FAILED_EMAILS_PATH = path.join(__dirname, "failed-emails.json");
 
 // ENV Constants
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -25,12 +26,12 @@ I have received the following email from my college regarding job offers from a 
 	-	Company_Name (string) - Name of the company
 	-	Job_Role (string) - Software Engineer, Data Scientist, etc.
   - offer_type (string) - Internship or Full Time
-	-	Internship_Stipend (integer) - Internship stipend
+	-	Internship_Stipend (string) - Internship stipend
   - Internship_Duration (string) - Internship Duration
 	-	Job_Location (string) - Location of the job
 	-	No_of_students_who_got_offers (integer) - Number of students who got offers
 	-	FTE_Expected_package (string) - expected salary or ctc package for FTE in lakhs  per annum after internship, the expected paackage can also be in range like 16-20 LPA
-	-	FTE_Package (integer) - package for FTE in lakhs per annum
+	-	FTE_Package (string) - package for FTE in lakhs per annum
   - Bond (string) - details of Bond if present
 
 Return the information in JSON format.
@@ -70,3 +71,16 @@ example Response 2:
 The Email is as follows:
 
 `;
+
+export const NOTION_DATABASE_COLUMNS = [
+  "Company_Name",
+  "Job_Role",
+  "Internship_Stipend",
+  "Internship_Duration",
+  "Job_Location",
+  "No_of_students_who_got_offers",
+  "CTC_Details",
+  "FTE_Expected_package",
+  "FTE_Package",
+  "Bond",
+];

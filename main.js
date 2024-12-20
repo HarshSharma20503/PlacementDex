@@ -2,10 +2,11 @@ import dotenv from "dotenv";
 dotenv.config();
 import GmailService from "./services/GmailService.js";
 import GeminiService from "./services/GeminiService.js";
+import NotionService from "./services/NotionService.js";
 import inquirer from "inquirer";
-
-const gmailService = new GmailService();
-const geminiService = new GeminiService();
+import { parseGeminiResponse } from "./utils/helper.js";
+import { markEmailAsProcessed } from "./utils/ProcessedEmails.js";
+import { markEmailAsFailed } from "./utils/FailedEmails.js";
 
 const Options = {
   "Fetch Oldest Unprocessed Emails": 1,
@@ -27,6 +28,11 @@ const getChoiceFromUser = async () => {
 };
 
 async function main() {
+  const gmailService = new GmailService();
+  await gmailService.initialize();
+  const geminiService = new GeminiService();
+  const notionService = new NotionService();
+
   const choice = await getChoiceFromUser();
   console.log("Getting Gmail Service");
 
@@ -38,10 +44,24 @@ async function main() {
     console.log("Fetching Latest Unprocessed Emails");
     emails = await gmailService.searchUnprocessedLatestEmails();
   }
-  console.log("Parsing email with Gemini");
+  if (emails.length === 0) {
+    console.log("No emails to process");
+    return;
+  }
+  console.log("Parsing emails with Gemini");
   for (const email of emails) {
     const response = await geminiService.parseEmailWithGemini(email);
-    console.log("Response from Gemini:", response.text());
+    const data = parseGeminiResponse(response.text());
+    console.log("******************************************************");
+    console.log("Company Name:", data.Company_Name);
+    console.log("Adding to Notion");
+    const success = await notionService.addToNotion(data);
+    if (success) {
+      await markEmailAsProcessed(email);
+    } else {
+      await markEmailAsFailed(email);
+    }
+    console.log("******************************************************");
   }
 }
 
