@@ -6,6 +6,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 import { Client } from "@notionhq/client";
 
+const LAST_PROCESSED_DATE_PATH = path.join(__dirname, "last-processed-date.json");
+
 dotenv.config();
 
 const __dirname = path.resolve();
@@ -19,13 +21,60 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
-async function searchEmails(gmail) {
+async function searchEmails(gmail) 
+{
+  try {
+    const query = lastProcessedDate
+      ? `from:anurag.jptnp@gmail.com after:${lastProcessedDate}`
+      : "from:anurag.jptnp@gmail.com";
+
+    const response = await gmail.users.messages.list({
+      userId: "me",
+      q: query,
+      maxResults: 10,
+    });
+
+    const messages = response.data.messages || [];
+    const filteredMessages = [];
+
+    for (const message of messages) {
+      const fullMessage = await gmail.users.messages.get({
+        userId: "me",
+        id: message.id,
+        format: "full",
+      });
+
+      let emailBody = "";
+      if (fullMessage.data.payload.parts) {
+        for (const part of fullMessage.data.payload.parts) {
+          if (part.body.data) {
+            const buff = Buffer.from(part.body.data, "base64");
+            emailBody += buff.toString();
+          }
+        }
+      } else if (fullMessage.data.payload.body.data) {
+        const buff = Buffer.from(fullMessage.data.payload.body.data, "base64");
+        emailBody += buff.toString();
+      }
+
+      if (emailBody.toLowerCase().includes("congratulations")) {
+        filteredMessages.push(message);
+      }
+    }
+
+    return filteredMessages;
+  } catch (error) {
+    console.error("Error searching emails:", error);
+    return [];
+  }
+
+
   try {
     // First, get all messages
     const response = await gmail.users.messages.list({
       userId: "me",
       q: "from:anurag.jptnp@gmail.com",
-      maxResults: 10,
+      maxResults: 30,
     });
 
     const messages = response.data.messages || [];
@@ -151,11 +200,13 @@ async function parseEmailWithGemini(email) {
     - Internship_Stipend
     - PPO_Package (if mentioned)
     - Employment_Type (Full-time/Part-time/Internship)
-    - Salary (if different from PPO Package)
+    - Base_Salary
     - Job_Location (Remote/On-site)
     - Equity_Stock_Options (if applicable)
     - Bonuses
-    - CGPA
+    - CGPA_Criteria
+    - Date
+    
     
     Return the information in JSON format.
     
@@ -190,56 +241,59 @@ async function addToNotion(parsedData) {
     const response = await notion.pages.create({
       parent: { database_id: NOTION_DATABASE_ID },
       properties: {
-        "Company Name": {
+        "Company_Name": {
           title: [{ text: { content: parsedData.Company_Name } }],
         },
-        // "Job Role": {
-        //   rich_text: [{ text: { content: parsedData.jobRole } }],
-        // },
-        // "Internship Stipend": {
-        //   rich_text: [
-        //     { text: { content: parsedData.internshipStipend.toString() } },
-        //   ],
-        // },
-        // "PPO Package": {
-        //   rich_text: [
-        //     { text: { content: parsedData.ppoPackage || "Not mentioned" } },
-        //   ],
-        // },
-        // "Employment Type": {
-        //   rich_text: [
-        //     { text: { content: parsedData.employmentType || "Not mentioned" } },
-        //   ],
-        // },
-        // Salary: {
-        //   rich_text: [
-        //     { text: { content: parsedData.salary || "Not mentioned" } },
-        //   ],
-        // },
-        // "Job Location": {
-        //   rich_text: [
-        //     { text: { content: parsedData.jobLocation || "Not mentioned" } },
-        //   ],
-        // },
-        // "Equity/Stock Options": {
-        //   rich_text: [
-        //     {
-        //       text: {
-        //         content: parsedData.equityStockOptions || "Not mentioned",
-        //       },
-        //     },
-        //   ],
-        // },
-        // Bonuses: {
-        //   rich_text: [
-        //     { text: { content: parsedData.bonuses || "Not mentioned" } },
-        //   ],
-        // },
-        // CGPA: {
-        //   rich_text: [
-        //     { text: { content: parsedData.cgpa || "Not mentioned" } },
-        //   ],
-        // },
+        "Job_Role": {
+          rich_text: [{ text: { content: parsedData.jobRole } }],
+        },
+        "Internship_Stipend": {
+          rich_text: [
+            { text: { content: parsedData.internshipStipend.toString() } },
+          ],
+        },
+        "PPO_Package": {
+          rich_text: [
+            { text: { content: parsedData.ppoPackage || "Not mentioned" } },
+          ],
+        },
+        "Employment_Type": {
+          rich_text: [
+            { text: { content: parsedData.employmentType || "Not mentioned" } },
+          ],
+        },
+        "Base_Salary": {
+          rich_text: [
+            { text: { content: parsedData.salary || "Not mentioned" } },
+          ],
+        },
+        "Job_Location": {
+          rich_text: [
+            { text: { content: parsedData.jobLocation || "Not mentioned" } },
+          ],
+        },
+        "Stock_Options": {
+          rich_text: [
+            {
+              text: {
+                content: parsedData.equityStockOptions || "Not mentioned",
+              },
+            },
+          ],
+        },
+        "Bonuses": {
+          rich_text: [
+            { text: { content: parsedData.bonuses || "Not mentioned" } },
+          ],
+        },
+        "CGPA_Criteria": {
+          rich_text: [
+            { text: { content: parsedData.cgpa || "Not mentioned" } },
+          ],
+        },
+      },
+      "Date": {
+        title: [{ text: { content: parsedData.Date } }],
       },
     });
     console.log("Page created:", response);
@@ -276,6 +330,57 @@ async function main() {
     }
   } catch (error) {
     console.error("Error in main:", error);
+  }
+  try {
+    const auth = await getAuth();
+    const gmail = google.gmail({ version: "v1", auth });
+
+    const lastProcessedDate = await loadLastProcessedDate();
+
+    const messages = await searchEmails(gmail, lastProcessedDate);
+
+    let newLastProcessedDate = lastProcessedDate;
+
+    for (const message of messages) {
+      const emailContent = await getEmailContent(gmail, message.id);
+      if (!emailContent) continue;
+
+      console.log("Email Processing: ", emailContent.subject);
+
+      const parsedData = await parseEmailWithGemini(emailContent);
+      if (!parsedData) continue;
+
+      console.log(parsedData);
+      console.log(parsedData.Company_Name);
+
+      await addToNotion(parsedData);
+
+      newLastProcessedDate = emailContent.date;
+    }
+
+    if (newLastProcessedDate !== lastProcessedDate) {
+      await saveLastProcessedDate(newLastProcessedDate);
+    }
+  } catch (error) {
+    console.error("Error in main:", error);
+  }
+}
+
+async function loadLastProcessedDate()
+{
+  try {
+    const content = await fs.readFile(LAST_PROCESSED_DATE_PATH, "utf-8");
+    return JSON.parse(content).date;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function saveLastProcessedDate(date) {
+  try {
+    await fs.writeFile(LAST_PROCESSED_DATE_PATH, JSON.stringify({ date }, null, 2));
+  } catch (error) {
+    console.error("Error saving last processed date:", error);
   }
 }
 

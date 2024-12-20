@@ -8,6 +8,14 @@
     "@google/generative-ai": "^0.21.0",
     "@notionhq/client": "^2.2.15",
     "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "googleapis": "^144.0.0"
-  }
+  },
+  "name": "placementdex",
+  "version": "1.0.0",
+  "description": "Placement Stats",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
