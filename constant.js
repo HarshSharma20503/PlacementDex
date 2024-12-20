@@ -20,3 +20,20 @@ export const TNP_EMAILS = process.env.TNP_EMAILS.split(",");
 export const NODE_ENV = process.env.NODE_ENV || development;
 
 export const SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"];
+export const BASE_PROMPT =`
+    Extract the following information from this email about a job offer:
+    - Company_Name
+    - Job_Role
+    - Internship_Stipend
+    - PPO_Package (if mentioned)
+    - Employment_Type (Full-time/Part-time/Internship)
+    - Base_Salary
+    - Job_Location (Remote/On-site)
+    - Equity_Stock_Options (if applicable)
+    - Bonuses
+    - CGPA_Criteria
+    - Date
+    
+    
+    Return the information in JSON format.   
+  `

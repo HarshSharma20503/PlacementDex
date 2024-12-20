@@ -1,4 +1,10 @@
+
 class GeminiService {
+  async initialize()
+  {
+    //this.prompt=
+    
+  }
   constructor() {
     this.client = new GeminiClient();
   }
