@@ -1,5 +1,6 @@
 export const parseGeminiResponse = (response) => {
   response = response.replace("```json", "").replace("```", "");
+  console.log(response);
   const parsedResponse = JSON.parse(response);
   return parsedResponse;
 };

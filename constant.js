@@ -40,6 +40,7 @@ Note:
 1. If the offer is of internship than FTE_Expected_package should be present 
 2. If the offer is of FTE than Internship_Stipend and Internship_Duration should not be present.
 3. If the body of the email contains Internship duration or Internship Stipend that means the offer is Internship not full time.
+4. If any of the property is not present then return empty string for that property.
 
 
 Response should look like:
